@@ -124,8 +124,8 @@ Real projects mix styles. Start from the closest row and adjust.
 
 | Project type | Main API | Add-ons | Why |
 | --- | --- | --- | --- |
-| Marketplace / booking app (e.g. Revv) | REST | Webhooks for payments; SSE or push notifications for booking status; WebSockets only if in-app chat | CRUD-heavy, mobile clients, third-party payments |
-| E-commerce store (e.g. INER-G) | REST, or the platform's API (Shopify GraphQL) | Webhooks for orders and payments | Platform does most of the work |
+| Marketplace / booking app | REST | Webhooks for payments; SSE or push notifications for booking status; WebSockets only if in-app chat | CRUD-heavy, mobile clients, third-party payments |
+| E-commerce store | REST, or the platform's API (Shopify GraphQL) | Webhooks for orders and payments | Platform does most of the work |
 | Client websites / landing pages | None, or a few REST/serverless endpoints | Webhooks from form/CRM tools | Mostly static |
 | AI chat or agent app | REST | SSE for streaming model output; queue for long jobs | Token streaming is one-way |
 | Trading bot / live dashboard | REST for orders and history | WebSockets for market data; queue for signals | Prices change every millisecond |
