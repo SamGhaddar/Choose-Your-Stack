@@ -4,13 +4,19 @@ My personal reference for picking the right tech stack when starting a new proje
 
 ## Guides
 
+Start with Reference stacks, then open the guide for each layer the project needs.
+
 | Guide | Covers | Status |
 | --- | --- | --- |
-| [API styles](guides/api-styles.md) | REST, GraphQL, gRPC, SOAP, Webhooks, SSE, WebSockets, WebRTC, MQTT, message queues | Done |
-| Databases | Postgres, SQLite, Mongo, Redis, Supabase, vector DBs | Planned |
-| Frontend & mobile | Next.js, Astro, React Native/Expo, plain HTML | Planned |
-| Hosting & deploy | Vercel, Railway, Cloudflare, Supabase, VPS | Planned |
-| Auth & payments | Supabase Auth, Clerk, Stripe, local gateways | Planned |
+| [Reference stacks](guides/reference-stacks.md) | Stack by project type, default rule, regrets to flag | Done |
+| [API styles](guides/api-styles.md) | REST, GraphQL, gRPC, SOAP, Webhooks, SSE, WebSockets, WebRTC, MQTT, message queues, mixing styles | Done |
+| [Databases](guides/databases.md) | PostgreSQL, MySQL, MongoDB, SQLite, Redis | Done |
+| [Frontend & mobile](guides/frontend-and-mobile.md) | Static sites, Next.js, React Native with Expo, Flutter, admin tools | Done |
+| [Backend](guides/backend.md) | Languages, frameworks, backend-as-a-service | Done |
+| [Hosting & deploy](guides/hosting-and-deploy.md) | Hosting, file storage, email, monitoring, secrets | Done |
+| [Auth & payments](guides/auth-and-payments.md) | Managed sign-in, authorization, payment providers | Done |
+| [Glossary](guides/glossary.md) | Plain-language definitions of terms used in the guides | Done |
+| Vector DBs and AI infrastructure | Vector databases, model hosting, evals | Planned |
 
 ## Quick picker: API style
 
@@ -44,9 +50,9 @@ If every add-on question is a no, the main API is enough. Full details are in [g
 
 ## How to use this repo with Claude
 
-**In a Claude chat:** download the guide's `.md` file and attach it, then paste:
+**In a Claude chat:** download the guides you need as `.md` files and attach them, then paste:
 
-> Use the attached guide. Here is my project: [what it does, who uses it, web/mobile/IoT, real-time needs, team size, existing stack]. Recommend the main API style and any add-ons, explain why using the guide's criteria, and flag anything I'm likely to regret later.
+> Use the attached guides. Here is my project: [what it does, who uses it, web/mobile/IoT, real-time needs, team size, existing stack, new build or refactor]. Recommend a stack layer by layer (front end, back end, database, API style and add-ons, auth, hosting). Explain each choice using the guides' criteria, and flag anything I'm likely to regret later.
 
 **In Claude Code:** clone this repo next to your projects, or add a line to a project's `CLAUDE.md`:
 
@@ -55,7 +61,7 @@ For stack decisions, follow ~/Choose-Your-Stack/guides/ and record the result in
 ```
 
 **From anywhere:** use the raw URL of a guide, for example
-`https://raw.githubusercontent.com/SamGhaddar/Choose-Your-Stack/main/guides/api-styles.md`
+`https://raw.githubusercontent.com/SamGhaddar/Choose-Your-Stack/main/guides/reference-stacks.md`
 
 ## Recording decisions
 
@@ -68,7 +74,14 @@ Choose-Your-Stack/
 ├── README.md            this page + quick picker
 ├── CLAUDE.md            instructions for Claude sessions
 ├── guides/              one decision guide per topic
-│   └── api-styles.md
+│   ├── reference-stacks.md
+│   ├── api-styles.md
+│   ├── databases.md
+│   ├── frontend-and-mobile.md
+│   ├── backend.md
+│   ├── hosting-and-deploy.md
+│   ├── auth-and-payments.md
+│   └── glossary.md
 ├── decisions/           one record per project
 │   ├── README.md
 │   └── TEMPLATE.md

@@ -1,8 +1,8 @@
 # API Style Decision Guide
 
-Last updated: 2026-11-13
+Last updated: 2026-11-17
 
-Most projects need one main API style for request/response, plus one or two add-ons for real-time or events. Use this guide to pick them when starting a new project or refactoring an old one.
+Most projects need one main API style for request/response, plus one or two add-ons for real-time or events. Use this guide to pick them when starting a new project or refactoring an old one. An API is the waiter between the front end and the back end.
 
 ## How to use this doc
 
@@ -27,7 +27,7 @@ Prompt to paste with it:
     - Slow work that can finish later? → Message queue
     - Internal services need fast, typed calls? → gRPC
 
-Most projects end up with REST plus one or two add-ons. See Reference stacks for common combinations. The flowchart version is in the [README](../README.md).
+Most projects end up with REST plus one or two add-ons. See [Reference stacks](reference-stacks.md) for common combinations. The flowchart version is in the [README](../README.md).
 
 ## Side-by-side comparison
 
@@ -38,11 +38,11 @@ Most projects end up with REST plus one or two add-ons. See Reference stacks for
 | gRPC | Client asks, or streams both ways | Protobuf (binary) | HTTP/2 | Only via gRPC-Web proxy | Fast service-to-service calls, strict contracts | Browsers, human debugging |
 | SOAP | Client asks | XML | HTTP, SMTP, others | Awkward | Integrating with legacy bank/gov/health systems | Everything new |
 | Webhooks | Server calls you | JSON | HTTP POST | n/a (server to server) | Event notifications between services | Needs a public URL, retries, signature checks |
-| SSE | Server pushes, one way | Text/JSON | HTTP | Yes | Live feeds, AI token streaming, notifications | Client-to-server messages |
+| SSE | Server pushes, one way | Text/JSON | HTTP | Yes | Live feeds, AI token streaming, notifications | Client-to-server messages; browser EventSource is GET-only (AI streaming often uses fetch over POST); about 6 connections per domain on HTTP/1.1 |
 | WebSockets | Both, anytime | Text, JSON, binary | Upgraded HTTP, persistent | Yes | Chat, live dashboards, multiplayer, trading feeds | Scaling many open connections, no built-in caching |
 | WebRTC | Peer to peer | Audio, video, data channels | UDP mostly | Yes | Video/voice calls, screen share, P2P file transfer | Needs signaling + TURN servers, hard to debug |
-| MQTT | Pub/sub via a broker | Any bytes | TCP (or WebSocket) | Via WebSocket | IoT devices, sensors, cars, flaky networks | General web APIs |
-| Message queue (RabbitMQ, Kafka, SQS) | Pub/sub via a broker | Any | TCP | No | Background jobs, decoupling microservices, event logs | Direct user-facing calls |
+| MQTT | Pub/sub via a broker | Any bytes | TCP (or WebSocket) | Via WebSocket | IoT devices, sensors, vehicles, flaky networks | General web APIs |
+| Message queue (RabbitMQ, Kafka, SQS) | Producer to broker to worker | Any | TCP | No | Background jobs (a Redis- or Postgres-backed queue is enough for small apps), decoupling microservices, event logs (Kafka) | Direct user-facing calls |
 
 ## Each style in short
 
@@ -56,7 +56,7 @@ The waiter model: one URL per resource, HTTP verbs (GET, POST, PUT/PATCH, DELETE
 
 ### GraphQL
 
-One endpoint. The client writes a query asking for exactly the fields it needs.
+One endpoint. The client writes a query asking for exactly the fields it needs. With REST the server decides what each address returns; with GraphQL the client lists the fields it wants in one request.
 
 - **Use when:** several frontends (web, iOS, Android) need different slices of related data, or REST is forcing many round trips per screen.
 - **Avoid when:** the API is small or CRUD-shaped, or you rely on HTTP caching/CDNs. It adds schema, resolver and N+1 query work.
@@ -82,7 +82,7 @@ Strict XML envelopes with a WSDL contract and built-in WS-Security/transactions.
 The "reverse API": you register a URL, and the other service POSTs to it when an event happens.
 
 - **Use when:** reacting to third-party events (payment succeeded, code pushed, order placed) or notifying your own customers' systems.
-- **Must do:** verify signatures, respond fast (queue the work), make handlers idempotent (events can arrive twice or out of order), log every event.
+- **Must do:** verify signatures, respond fast (queue the work), tolerate duplicate or out-of-order events (deduplicate by the provider's event ID), log every event.
 - **Examples:** Stripe, GitHub, Shopify, Twilio.
 
 ### SSE (Server-Sent Events)
@@ -90,8 +90,8 @@ The "reverse API": you register a URL, and the other service POSTs to it when an
 A normal HTTP response that stays open and streams events one way, server to client. The browser reconnects automatically.
 
 - **Use when:** you only need server → client push: notifications, live status, progress bars, streaming LLM output.
-- **Avoid when:** the client also sends frequent messages (use WebSockets).
-- **Note:** this is how most AI chat apps stream replies. It is simpler than WebSockets and works through most proxies.
+- **Avoid when:** the client also sends frequent messages (use WebSockets), or the client is a mobile app that may be in the background (use push notifications there).
+- **Note:** this is how most AI chat apps stream replies. It is simpler than WebSockets and works through most proxies. Browser `EventSource` is GET-only with no custom headers, so AI streaming often uses fetch streaming over POST instead.
 
 ### WebSockets
 
@@ -99,7 +99,7 @@ A persistent two-way channel opened by an HTTP upgrade handshake.
 
 - **Use when:** both sides talk often and fast: chat, collaborative editing, multiplayer games, live trading/market data.
 - **Avoid when:** one-way push is enough (SSE), or requests are occasional (REST).
-- **Watch out for:** sticky sessions or a pub/sub layer (Redis) when scaling past one server, plus reconnect logic and heartbeats.
+- **Watch out for:** sticky sessions or a pub/sub layer (Redis) when scaling past one server, plus reconnect logic and heartbeats. Serverless hosts cannot hold WebSockets; use an always-on host.
 - **Tooling:** Socket.IO, ws, Supabase Realtime, Pusher, Ably.
 
 ### WebRTC
@@ -115,25 +115,26 @@ Peer-to-peer audio, video and data between browsers or apps.
 Publish/subscribe through a broker. Senders and receivers never talk directly.
 
 - **MQTT:** a lightweight protocol for devices, sensors and vehicles on unreliable networks (Mosquitto, EMQX, AWS IoT Core).
-- **Queues/streams:** for background jobs and decoupling services (RabbitMQ, Kafka, SQS, BullMQ, Celery).
+- **Queues/streams:** for background jobs and decoupling services (RabbitMQ, Kafka, SQS, BullMQ, Celery). Kafka is an event log rather than a job queue; for small apps a Redis- or Postgres-backed job queue is enough.
 - **Use when:** work can happen later, many services react to one event, or devices report telemetry.
+
+## Mixing styles in one app
+
+Most apps use one main API style plus add-ons, each for a different job, and that is normal, not a mistake.
+
+| Job | Style | Why |
+| --- | --- | --- |
+| Core records and profiles | REST (main) | Simple reads and writes on clear resources |
+| Payment confirmations | Webhooks from the payment provider | The provider tells you when money moves |
+| Live chat | WebSockets | Two-way and instant |
+| Status updates | Push notifications on mobile, SSE on web | The server tells the user without a refresh |
+| Long tasks such as PDFs or emails | Queue plus worker | The app stays fast while work runs in the background |
+
+Chat normally uses WebSockets, not GraphQL, because plain REST or GraphQL cannot push messages instantly both ways. GraphQL subscriptions do exist, but they run over WebSocket anyway. REST and GraphQL can run side by side in one app, as GitHub does. Only add GraphQL when some screens need flexible data slices that REST handles badly. For most projects, REST plus the right add-ons is enough.
 
 ## Reference stacks
 
-Real projects mix styles. Start from the closest row and adjust.
-
-| Project type | Main API | Add-ons | Why |
-| --- | --- | --- | --- |
-| Marketplace / booking app | REST | Webhooks for payments; SSE or push notifications for booking status; WebSockets only if in-app chat | CRUD-heavy, mobile clients, third-party payments |
-| E-commerce store | REST, or the platform's API (Shopify GraphQL) | Webhooks for orders and payments | Platform does most of the work |
-| Client websites / landing pages | None, or a few REST/serverless endpoints | Webhooks from form/CRM tools | Mostly static |
-| AI chat or agent app | REST | SSE for streaming model output; queue for long jobs | Token streaming is one-way |
-| Trading bot / live dashboard | REST for orders and history | WebSockets for market data; queue for signals | Prices change every millisecond |
-| Chat / collaboration tool | REST for history and auth | WebSockets for live messages | Two-way, high frequency |
-| Video calling feature | REST | WebRTC via LiveKit/Daily, WebSockets for signaling | Media needs P2P/SFU |
-| IoT / vehicle telemetry (e.g. EV diagnostics) | MQTT from devices | REST for the dashboard; queue for processing | Low power, unreliable networks |
-| Microservices backend | REST or GraphQL at the edge | gRPC between services; Kafka/RabbitMQ for events | Public stays simple, internals stay fast |
-| Integration with a bank or government system | Whatever they offer (often SOAP) | Wrap it behind your own REST service | Keep legacy at the edge |
+See [reference-stacks.md](reference-stacks.md) for the full stack by project type.
 
 ## Refactoring: when to switch
 
@@ -145,7 +146,7 @@ Only migrate when you see a symptom below. Add the new style alongside the old o
 | A screen makes 5+ REST calls, or payloads are mostly unused fields | Over/under-fetching | Add a GraphQL layer or a few purpose-built REST endpoints (BFF) |
 | Internal service calls are slow or contracts keep breaking | Loose JSON between services | gRPC between services, REST stays public |
 | Request times out doing heavy work (emails, PDFs, AI calls) | Doing slow work inline | Queue + worker; notify via webhook/SSE when done |
-| Missed or duplicated payment events | Fragile webhook handling | Signature checks, idempotency keys, store-then-process |
+| Missed or duplicated payment events | Fragile webhook handling | Signature checks, deduplicate by the provider's event ID, store first then process |
 | WebSocket server falls over with more users | Single-node connection state | Redis pub/sub or a managed service (Ably, Pusher, Supabase Realtime) |
 | GraphQL server is slow or complex for a small API | Overkill | Simplify back to REST |
 
@@ -158,4 +159,4 @@ Safe migration pattern: version the API (`/v2`) or run old and new side by side,
 - **"GitHub's API is entirely GraphQL."** GitHub runs both a REST API and a GraphQL API.
 - **"WebRTC needs no server."** It needs signaling and usually TURN relays. Group calls run through media servers.
 - **"GraphQL is always better than REST."** It trades fetch flexibility for more server complexity and harder caching.
-- **"Pick one API style."** Most real products combine a main style with push or event add-ons (see Reference stacks).
+- **"Pick one API style."** Most real products combine a main style with push or event add-ons (see Mixing styles in one app).
